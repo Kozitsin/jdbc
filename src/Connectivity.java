@@ -32,6 +32,97 @@ public class Connectivity implements DataBase {
         return sb.toString();
     }
 
+    private void addStoredProcedures() {
+        try {
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+            conn = DriverManager.getConnection(getConnectionURL(), "test", "test");
+
+            Statement st = conn.createStatement();
+            // create table
+            st.execute("CREATE PROCEDURE CREATE_TABLE " +
+                       "AS " +
+                       "BEGIN " +
+                       "CREATE TABLE PERSON " +
+                       "(id INTEGER, " +
+                       "name NVARCHAR(255), " +
+                       "surname NVARCHAR(255), " +
+                       "age INTEGER, " +
+                       "PRIMARY KEY (id)) " +
+                       "END"
+            );
+
+            // delete table
+            st.execute("CREATE PROCEDURE DROP_TABLE " +
+                       "AS " +
+                       "BEGIN " +
+                       "DROP TABLE PERSON " +
+                       "END"
+            );
+
+            // insert in table
+            st.execute("CREATE PROCEDURE INSERT_IN_TABLE " +
+                       "@id INTEGER, " +
+                       "@name NVARCHAR(255), " +
+                       "@surname NVARCHAR(255), " +
+                       "@age INTEGER " +
+                       "AS " +
+                       "BEGIN " +
+                       "INSERT INTO PERSON " +
+                       "VALUES (@id, @name, @surname, @age) " +
+                       "END"
+            );
+
+            // search
+            st.execute("CREATE PROCEDURE SEARCH " +
+                       "@surname NVARCHAR(255) " +
+                       "AS " +
+                       "BEGIN " +
+                       "SELECT * FROM PERSON " +
+                       "WHERE SURNAME = @surname " +
+                       "END"
+            );
+
+            // update table
+            st.execute("CREATE PROCEDURE UPDATE_TABLE " +
+                       "@id INTEGER, " +
+                       "@name NVARCHAR(255), " +
+                       "@surname NVARCHAR(255), " +
+                       "@age INTEGER " +
+                       "AS " +
+                       "BEGIN " +
+                       "UPDATE PERSON " +
+                       "SET name = @name, surname = @surname, age = @age " +
+                       "WHERE id = @id " +
+                       "END"
+            );
+
+            //delete from table
+            st.execute("CREATE PROCEDURE DELETE_FROM_TABLE " +
+                       "@surname NVARCHAR(255) " +
+                       "AS " +
+                       "BEGIN " +
+                       "DELETE FROM PERSON " +
+                       "WHERE surname = @surname " +
+                       "END"
+            );
+
+            operationStatus = true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            operationStatus = false;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            operationStatus = false;
+        } finally {
+            try {
+                conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                operationStatus = false;
+            }
+        }
+    }
+
     public void createNewDB() {
         try {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
@@ -40,6 +131,8 @@ public class Connectivity implements DataBase {
             Statement st = conn.createStatement();
             String sql = "CREATE DATABASE " + dbName;
             st.executeUpdate(sql);
+
+            addStoredProcedures();
 
             operationStatus = true;
         } catch (SQLException e) {
@@ -90,14 +183,9 @@ public class Connectivity implements DataBase {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             conn = DriverManager.getConnection(getConnectionURL(), "test", "test");
 
-            PreparedStatement ps = conn.prepareStatement("CREATE TABLE PERSON" +
-                                                         "(id INTEGER," +
-                                                         " name NVARCHAR(255)," +
-                                                         " surname NVARCHAR(255)," +
-                                                         " age INTEGER," +
-                                                         " PRIMARY KEY (id))");
+            CallableStatement call = conn.prepareCall("EXECUTE CREATE_TABLE");
+            call.execute();
 
-            ps.executeUpdate();
             operationStatus = true;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -120,8 +208,9 @@ public class Connectivity implements DataBase {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             conn = DriverManager.getConnection(getConnectionURL(), "test", "test");
 
-            PreparedStatement ps = conn.prepareStatement("DROP TABLE PERSON");
-            ps.executeUpdate();
+            CallableStatement call = conn.prepareCall("EXECUTE DROP_TABLE");
+            call.execute();
+
             operationStatus = true;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -144,15 +233,16 @@ public class Connectivity implements DataBase {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             conn = DriverManager.getConnection(getConnectionURL(), "test", "test");
 
-            PreparedStatement ps = conn.prepareStatement("INSERT INTO PERSON " +
-                                                         "VALUES (?, ?, ?, ?)");
-            ps.clearParameters();
-            ps.setInt(1, id);
-            ps.setString(2, name);
-            ps.setString(3, surname);
-            ps.setInt(4, age);
+            CallableStatement call = conn.prepareCall("EXECUTE INSERT_IN_TABLE ?, ?, ?, ?");
+            call.clearParameters();
 
-            ps.executeUpdate();
+            call.setInt(1, id);
+            call.setString(2, name);
+            call.setString(3, surname);
+            call.setInt(4, age);
+
+            call.executeUpdate();
+
             operationStatus = true;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -175,12 +265,12 @@ public class Connectivity implements DataBase {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             conn = DriverManager.getConnection(getConnectionURL(), "test", "test");
 
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM PERSON WHERE surname = ?");
+            CallableStatement call = conn.prepareCall("EXECUTE SEARCH ?");
 
-            ps.clearParameters();
-            ps.setString(1, surname);
+            call.clearParameters();
+            call.setString(1, surname);
 
-            ResultSet rs = ps.executeQuery();
+            ResultSet rs = call.executeQuery();
 
             int rowCount = 4;
             ArrayList<Object[]> list = new ArrayList<Object[]>();
@@ -215,16 +305,16 @@ public class Connectivity implements DataBase {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             conn = DriverManager.getConnection(getConnectionURL(), "test", "test");
 
-            PreparedStatement ps = conn.prepareStatement("UPDATE PERSON " +
-                                                         "SET name = ?, surname = ?, age = ? " +
-                                                         "WHERE id = ?");
-            ps.clearParameters();
-            ps.setString(1, name);
-            ps.setString(2, surname);
-            ps.setInt(3, age);
-            ps.setInt(4, id);
+            CallableStatement call = conn.prepareCall("EXECUTE UPDATE_TABLE ?, ?, ?, ?");
 
-            ps.executeUpdate();
+            call.clearParameters();
+            call.setInt(1, id);
+            call.setString(2, name);
+            call.setString(3, surname);
+            call.setInt(4, age);
+
+            call.executeUpdate();
+
             operationStatus = true;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -247,12 +337,12 @@ public class Connectivity implements DataBase {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             conn = DriverManager.getConnection(getConnectionURL(), "test", "test");
 
-            PreparedStatement ps = conn.prepareStatement("DELETE FROM PERSON " +
-                                                         "WHERE surname = ?");
-            ps.clearParameters();
-            ps.setString(1, surname);
+            CallableStatement call = conn.prepareCall("EXECUTE DELETE_FROM_TABLE ?");
 
-            ps.executeUpdate();
+            call.clearParameters();
+            call.setString(1, surname);
+            call.executeUpdate();
+
             operationStatus = true;
         } catch (SQLException e) {
             e.printStackTrace();

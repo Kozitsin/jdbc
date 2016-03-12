@@ -2,8 +2,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 
 /**
@@ -11,15 +9,12 @@ import java.util.ArrayList;
  */
 public class MainForm extends JFrame {
 
-    /* private members */
     private Connectivity connectivity = new Connectivity();
 
     private JPanel dialogPanel = new JPanel();
     private JPanel mainPanel = new JPanel();
 
     private JTextField dbNameTextField = new JTextField();
-
-
 
     private boolean isNewDB = true;
 
@@ -29,19 +24,6 @@ public class MainForm extends JFrame {
         this.getContentPane().add(dialogPanel);
         this.pack();
         this.setVisible(true);
-
-
-        /*
-        JFrame frame = new JFrame("Database API");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        JLabel emptyLabel = new JLabel("fuck me");
-        emptyLabel.setPreferredSize(new Dimension(175, 100));
-        frame.getContentPane().add(emptyLabel, BorderLayout.CENTER);
-        //Display the window.
-        frame.pack();
-        frame.setVisible(true);
-        */
     }
 
 
@@ -195,8 +177,8 @@ public class MainForm extends JFrame {
 
                         model.setColumnIdentifiers(columnNames);
 
-                        for (int i = 0; i < rs.size(); i++) {
-                            model.addRow(rs.get(i));
+                        for (Object[] r : rs) {
+                            model.addRow(r);
                         }
                         table.setModel(model);
 
